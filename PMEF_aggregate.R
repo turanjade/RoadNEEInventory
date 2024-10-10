@@ -56,14 +56,14 @@ for (i in 1:length(filelist)) { # nolint
   }
 }
 
-### choose 100, 106, 107, 110, 116, 117, for road type 4 and 5, choose year 2010 onward  # nolint
+### Choose 100, 106, 107, 110, 116, 117, for road type 4 and 5, choose year 2010 onward  # nolint
 pmef_final = pmef[which(pmef$pollutantID == 100 | pmef$pollutantID == 106 | pmef$pollutantID == 107 |  # nolint #three types of PM10
                     pmef$pollutantID == 110 | pmef$pollutantID == 116 | pmef$pollutantID == 117),] # nolint #three types of PM2.5
 pmef_final <- pmef_final[which(pmef_final$roadTypeID > 1), ] #only select road type, discard off-road network #nolint
 pmef_final <- pmef_final[which(pmef_final$modelYearID >= 2010), ] #only select 2010 and onward because of the availability of actual vehicle share #nolint
 pmef_final <- pmef_final[which(pmef_final$fuelTypeID != 5 & pmef_final$fuelTypeID != 3),] # nolint #only consider 1-gasoline, 2-diesel, and 9-electric #nolint
 
-#####take the share of Ontario vehicle
+### Take the share of Ontario vehicle
 agedist_on = read.csv(paste(inputpath, "\\0-vehshare_Ontario.csv", sep = ""), header = T) # nolint
 year <- unique(agedist_on$REF_DATE)
 
@@ -103,18 +103,18 @@ colnames(vehageshare) <- c("vehTyep", "yearID", "percentage")
 
 ### Calculate vehicle type distribution, four types
 vehtypeshare <- data.frame(matrix(0, nrow = 4, ncol = 2))
-colnames(vehtypeshare) = c("vehtype", "percentage") # nolint # nolint
+colnames(vehtypeshare) = c("vehtype", "percentage") # nolint
 vehtype <- unique(agedist_on$Vehicle.type)
 for (i in 1:length(vehtype)) { # nolint
   vehtypeshare$vehtype[i] <- vehtype[i]
   vehtypeshare$percentage[i] = sum(agedist_on$VALUE[which(agedist_on$Vehicle.type == vehtype[i])])/sum(agedist_on$VALUE) # nolint
 }
 
-# Write down the shares
+### Write down the shares
 write.csv(busshare, paste(outputpath, "\\0-busshare.csv", sep = "")) # nolint
-write.csv(ldvshare, paste(outputpath, "\\0-ldvshare.csv", sep = "")) # nolint # nolint
+write.csv(ldvshare, paste(outputpath, "\\0-ldvshare.csv", sep = "")) # nolint
 write.csv(ldtshare, paste(outputpath, "\\0-ldtshare.csv", sep = "")) # nolint
-write.csv(hdvshare, paste(outputpath, "\\0-hdvshare.csv", sep = "")) # nolint # nolint
+write.csv(hdvshare, paste(outputpath, "\\0-hdvshare.csv", sep = "")) # nolint
 write.csv(vehtypeshare, paste(outputpath, "\\0-typeshare.csv", sep = "")) # nolint
 
 ## The fuel share of Ontario. Only consider gasoline, diesel, and electricity (refer to stats canada) # nolint
