@@ -37,29 +37,29 @@ veh_fuel_age_weighted_ef <- function(road = NULL, link, pollutant, vehageshare, 
   ### Create a new matrix to store aggregated emission factor -- weighted by vehicle type and fuel type # nolint
   pmef_local = data.frame(matrix(0, nrow = length(road)*length(link)*length(pollutant), ncol = 4)) # nolint
   colnames(pmef_local) <- c("linkID", "pollutantID", "roadTypeID", "aggregatedEF") # nolint
-
+  
   # Only MOVES distinguish road type
   if (moves == 1 && is.null(road)) {
     stop("road category is required when moves equals 1.")
   }
-
+  
   fuel <- unique(efdb$fuelTypeID)
   age <- unique(efdb$modelYearID)
   source <- unique(efdb$sourceTypeID)
-
+  
   if (emfac == 1) {
     road <- 5
     vehageshare$percentage[which(vehageshare$vehType == "Light trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/length(which(vehlookup$vehLocal == "Light trucks")) # nolint
     vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")]/length(which(vehlookup$vehLocal == "Heavy trucks")) #nolint
     vehageshare$percentage[which(vehageshare$vehType == "Buses")] <- vehageshare$percentage[which(vehageshare$vehType == "Buses")]/length(which(vehlookup$vehLocal == "Buses")) #nolint
   }
-
+  
   if (moves == 1) {
     vehageshare$percentage[which(vehageshare$vehType == "Light trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/2 # nolint
     vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/5 #nolint
     vehageshare$percentage[which(vehageshare$vehType == "Buses")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/3 #nolint
   }
-
+  
   row <- 0 #redirect to the specific row to fill in the pmef
   for (p in pollutant) { # nolint
     for (r in road) {
@@ -68,7 +68,7 @@ veh_fuel_age_weighted_ef <- function(road = NULL, link, pollutant, vehageshare, 
         row <- row + 1
         for (s in source) {
           #lookup the local vehicle category
-          v <- unique(vehlookup$vehLocal[which(vehlookup$vehDB == s)])
+          v <- unique(vehlookup$vehLocal[which(as.character(vehlookup$vehDB) == s)])
           for (f in fuel) {
             for (a in age) {
               findrow <- which(efdb$linkID == l &
@@ -80,16 +80,18 @@ veh_fuel_age_weighted_ef <- function(road = NULL, link, pollutant, vehageshare, 
               if (length(findrow) == 0) {
                 weightef <- weightef
               } else {
-              weightef <- weightef +  vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == v)]* # nolint # age ratio
-              fuelshare$fuelshare[which(fuelshare$fueltype == f)] *  # nolint # fuel ratio
-              vehtypeshare$percentage[which(vehtypeshare$vehtype == v)] * efdb$emissionQuant[findrow] # nolint # type ratio
+                weightef <- weightef +  vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == v)]* # nolint # age ratio
+                  fuelshare$fuelshare[which(fuelshare$fueltype == f)] *  # nolint # fuel ratio
+                  vehtypeshare$percentage[which(vehtypeshare$vehType == v)] * efdb$emissionQuant[findrow] # nolint # type ratio
+                #print(paste("age share", vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == v)],
+                #      "fuelshare", fuelshare$fuelshare[which(fuelshare$fueltype == f)],
+                #      "typeshare", vehtypeshare$percentage[which(vehtypeshare$vehtype == v)],
+                #      "ef", efdb$emissionQuant[findrow], sep = ","))
               }
             }
           }
         }
-      }
-      pmef_local[row, ] <- cbind(l, p, r, weightef)
-      if (row %% 100 == 0) {
+        pmef_local[row, ] <- cbind(l, p, r, weightef)
         print(paste("This is row:", row, "speed, pollutant, road, ef are:", l, p, r, weightef)) # nolint
       }
     }
@@ -109,16 +111,16 @@ agedist_on = read.csv(paste(inputpath, "\\0-vehshare_Ontario.csv", sep = ""), he
 year <- unique(agedist_on$REF_DATE)
 
 ldvshare <- data.frame(matrix(0, nrow = length(year), ncol = 3))
-colnames(ldvshare) <- c("vehTyep", "yearID", "percentage")
+colnames(ldvshare) <- c("vehType", "yearID", "percentage")
 ldvshare$vehType <- "Passenger cars"
 ldtshare <- data.frame(matrix(0, nrow = length(year), ncol = 3))
-colnames(ldtshare) <- c("vehTyep", "yearID", "percentage")
+colnames(ldtshare) <- c("vehType", "yearID", "percentage")
 ldtshare$vehType <- "Light trucks"
 hdvshare <- data.frame(matrix(0, nrow = length(year), ncol = 3))
-colnames(hdvshare) <- c("vehTyep", "yearID", "percentage")
+colnames(hdvshare) <- c("vehType", "yearID", "percentage")
 hdvshare$vehType <- "Heavy trucks"
 busshare <- data.frame(matrix(0, nrow = length(year), ncol = 3))
-colnames(busshare) <- c("vehTyep", "yearID", "percentage")
+colnames(busshare) <- c("vehType", "yearID", "percentage")
 busshare$vehType <- "Buses"
 
 ## Calculate age distribution for four types of vehicles
@@ -137,14 +139,14 @@ for (i in 1:length(year)) { # nolint
                                                     agedist_on$REF_DATE == year[i])]/sum(agedist_on$VALUE[which(agedist_on$Vehicle.type == "Buses")]) # nolint
 }
 vehageshare <- rbind(ldvshare, ldtshare, hdvshare, busshare)
-colnames(vehageshare) <- c("vehTyep", "yearID", "percentage")
+colnames(vehageshare) <- c("vehType", "yearID", "percentage")
 
 ### Calculate vehicle type distribution, four types
 vehtypeshare <- data.frame(matrix(0, nrow = 4, ncol = 2))
-colnames(vehtypeshare) = c("vehtype", "percentage") # nolint
+colnames(vehtypeshare) = c("vehType", "percentage") # nolint
 vehtype <- unique(agedist_on$Vehicle.type)
 for (i in 1:length(vehtype)) { # nolint
-  vehtypeshare$vehtype[i] <- vehtype[i]
+  vehtypeshare$vehType[i] <- vehtype[i]
   vehtypeshare$percentage[i] = sum(agedist_on$VALUE[which(agedist_on$Vehicle.type == vehtype[i])])/sum(agedist_on$VALUE) # nolint
 }
 
@@ -204,7 +206,7 @@ pmef_moves$vehtype[which(pmef_moves$sourceTypeID <=32 & pmef_moves$sourceTypeID 
 pmef_moves$vehtype[which(pmef_moves$sourceTypeID <=43 & pmef_moves$sourceTypeID > 32)] <- "Buses" # nolint
 pmef_moves$vehtype[which(pmef_moves$sourceTypeID <=62 & pmef_moves$sourceTypeID > 43)] <- "Heavy trucks" # nolint
 
-veh <- pmef_moves$sourceTypeID
+veh <- unique(pmef_moves$sourceTypeID)
 vehlookup <- data.frame(matrix(0, nrow = length(veh), ncol = 2))
 colnames(vehlookup) <- c("vehLocal", "vehDB")
 for (i in 1:length(veh)) { #nolint
@@ -242,41 +244,41 @@ write.xlsx(pmef_tor_moves, paste(outputpath, "\\0_averagespeed_torontovehshare_a
 ############################################################################
 ############################################################################
 ### 2.3 EMFAC EF: take LA as a sample
-pmef_ca <- read.xlsx(paste(rootpath, "\\EMFAC2021_output\\PL_Los Angeles (SC)_2023_November_20241011044227.xlxs", sep = "")) #nolint
+pmef_emfac <- read.xlsx(paste(rootpath, "\\EMFAC2021_output\\PL_Los Angeles (SC)_2023_November_20241011044227.xlsx", sep = "")) #nolint
 
 ### Only consider gasoline, diesel, and electric
-pmef_ca <- pmef_ca[which(pmef_ca$fuel == "Gas" || pmef_ca$fuel == "Dsl" || pmef_ca$fuel == "Elec"), ] #nolint
+pmef_emfac <- pmef_emfac[which(pmef_emfac$fuel == "Gas" | pmef_emfac$fuel == "Dsl" | pmef_emfac$fuel == "Elec"), ] #nolint
 ## convert gasoline=1, diesel=2, electric=9
-pmef_ca$fuel[which(pmef_ca$fuel == "Gas")] <- 1
-pmef_ca$fuel[which(pmef_ca$fuel == "Dsl")] <- 2
-pmef_ca$fuel[which(pmef_ca$fuel == "Elec")] <- 9
+pmef_emfac$fuel[which(pmef_emfac$fuel == "Gas")] <- 1
+pmef_emfac$fuel[which(pmef_emfac$fuel == "Dsl")] <- 2
+pmef_emfac$fuel[which(pmef_emfac$fuel == "Elec")] <- 9
 
 ### Convert vehicle type to Toronto type
 # see PDF for detailed categorization in California: https://ww2.arb.ca.gov/sites/default/files/2021-01/EMFAC202x_Users_Guide_01112021_final.pdf #nolint
 # delete undesired categories
-pmef_ca <- pmef_ca[which(pmef_ca$vehicle_class != "MH" && pmef_ca$vehicle_class != "MCY" && pmef_ca$vehicle_class != PTO), ] #nolint
-pmef_ca$veh <- 0
-pmef_ca$veh[which(pmef_ca$vehicle_class == "SBUS" || pmef_ca$vehicle_class == "UBUS" || pmef_ca$vehicle_class == "Motor Coach" || #nolint
-                    pmef_ca$vehicle_class == "OBUS" || pmef_ca$vehicle_class == "All Other Buses")] <- "Buses" #nolint
-pmef_ca$veh[which(pmef_ca$vehicle_class == "LDA")] <- "Passenger cars" #nolint
-pmef_ca$veh[which(pmef_ca$vehicle_class == "LDT1" || pmef_ca$vehicle_class == "LDT2" || pmef_ca$vehicle_class == "MDV" || #nolint
-                    pmef_ca$vehicle_class == "LHD1" || pmef_ca$vehicle_class == "LHD2")] <- "Light trucks" #nolint
-pmef_ca$veh[which(pmef_ca$veh == 0)] <- "Heavy trucks"
+pmef_emfac <- pmef_emfac[which(pmef_emfac$vehicle_class != "MH" & pmef_emfac$vehicle_class != "MCY"), ] #nolint
+pmef_emfac$veh <- 0
+pmef_emfac$veh[which(pmef_emfac$vehicle_class == "SBUS" | pmef_emfac$vehicle_class == "UBUS" | pmef_emfac$vehicle_class == "Motor Coach" | #nolint
+                    pmef_emfac$vehicle_class == "OBUS" | pmef_emfac$vehicle_class == "All Other Buses")] <- "Buses" #nolint
+pmef_emfac$veh[which(pmef_emfac$vehicle_class == "LDA")] <- "Passenger cars" #nolint
+pmef_emfac$veh[which(pmef_emfac$vehicle_class == "LDT1" | pmef_emfac$vehicle_class == "LDT2" | pmef_emfac$vehicle_class == "MDV" | #nolint
+                    pmef_emfac$vehicle_class == "LHD1" | pmef_emfac$vehicle_class == "LHD2")] <- "Light trucks" #nolint
+pmef_emfac$veh[which(pmef_emfac$veh == 0)] <- "Heavy trucks"
 
 ### Too many types, add a look-up table
-veh <- unique(pmef_ca$veh)
+veh <- unique(pmef_emfac$vehicle_class)
 vehlookup <- data.frame(matrix(0, nrow = length(veh), ncol = 2))
 colnames(vehlookup) <- c("vehLocal", "vehDB")
 for (i in 1:length(veh)) { #nolint
   if (veh[i] == "LDA") {
     vehlookup$vehLocal[i] <- "Passenger cars"
     vehlookup$vehDB[i] <- veh[i]
-  } else if (veh[i] == "LDT1" || veh[i] == "LDT2" || veh[i] == "MDV" ||
-               veh[i] == "LHD1" || veh[i] == "LHD2") {
+  } else if (veh[i] == "LDT1" | veh[i] == "LDT2" | veh[i] == "MDV" |
+               veh[i] == "LHD1" | veh[i] == "LHD2") {
     vehlookup$vehLocal[i] <- "Light trucks"
     vehlookup$vehDB[i] <- veh[i]
-  } else if (veh[i] == "SBUS" || veh[i] == "UBUS" || veh[i] == "Motor Coach" ||
-               veh[i] == "OBUS" || veh[i] == "All Other Buses") {
+  } else if (veh[i] == "SBUS" | veh[i] == "UBUS" | veh[i] == "Motor Coach" |
+               veh[i] == "OBUS" | veh[i] == "All Other Buses") {
     vehlookup$vehLocal[i] <- "Buses"
     vehlookup$vehDB[i] <- veh[i]
   } else {
@@ -286,33 +288,33 @@ for (i in 1:length(veh)) { #nolint
 }
 
 # Only include PM2.5 and PM10
-pmef_ca <- pmef_ca[which(pmef_ca$pollutant != "PM"), ]
+pmef_emfac <- pmef_emfac[which(pmef_emfac$pollutant != "PM"), ]
 # Only include TP, BWP, TWP
-pmef_ca <- pmef_ca[which(pmef_ca$process == "RUNEX" || pmef_ca$process == "PMBW" || pmef_ca$process == "PMTW"), ] #nolint
+pmef_emfac <- pmef_emfac[which(pmef_emfac$process == "RUNEX" | pmef_emfac$process == "PMBW" | pmef_emfac$process == "PMTW"), ] #nolint
 
 # Calculate average EF for vehicles within one type
-age <- unique(pmef_ca$model_year)
-fuel <- unique(pmef_ca$fuel)
-speed <- unique(pmef_ca$speed_time)
-# pmef_ca_avg <- data.frame(matrix(0, nrow, ncol = 7)) # nolint
-pmef_ca$process_pollutant <- paste(pmef_ca$process, pmef_ca$pollutant, sep = "_") # nolint
-pollutant <- unique(pmef_ca$process_pollutant)
+age <- unique(pmef_emfac$model_year)
+fuel <- unique(pmef_emfac$fuel)
+speed <- unique(pmef_emfac$speed_time)
+# pmef_emfac_avg <- data.frame(matrix(0, nrow, ncol = 7)) # nolint
+pmef_emfac$process_pollutant <- paste(pmef_emfac$process, pmef_emfac$pollutant, sep = "_") # nolint
+pollutant <- unique(pmef_emfac$process_pollutant)
 
 # Add a synthetic road type 5 for all the EFs from EMFAC
-pmef_ca$roadTypeID <- 5
+pmef_emfac$roadTypeID <- 5
 
 # rename emfac table
-colnames(pmef_ca) <- c("calendar_year",	"season_month",	"sub_area",
+colnames(pmef_emfac) <- c("calendar_year",	"season_month",	"sub_area",
                        "sourceTypeID",	"fuelTypeID",	"modelYearID",
                        "temperature",	"relative_humidity",
                        "process",	"linkID",	"pollutant",	"emissionQuant",
                        "veh", "pollutantID", "roadTypeID")
 
 ## Apply the function
-pmef_tor_emfac <- veh_fuel_age_weighted_ef(5, link, pollutant, vehageshare, vehtypeshare, fuelshare, pmef_ca, 0, 1) #nolint
+pmef_tor_emfac <- veh_fuel_age_weighted_ef(5, speed, pollutant, vehageshare, vehtypeshare, fuelshare, pmef_emfac, 0, 1) #nolint
 
 # Write down the aggregated emission factor
-write.xlsx(pmef_tor_emfac, paste(outputpath, "\\0_averagespeed_torontovehshare_allPMEF_MOVES.xlsx", sep = "")) # nolint
+write.xlsx(pmef_tor_emfac, paste(outputpath, "\\0_averagespeed_torontovehshare_allPMEF_EMFAC.xlsx", sep = "")) # nolint
 
 #pmef_2020 = pmef_moves[which(pmef_moves$modelYearID>=2020),] # nolint
 #vehtype_source = list("Passenger cars" = 21, "Light trucks" = c(31,32), "Heavy trucks" = c(51,52,53,61,62), "Buses" = c(41, 42, 43)) # nolint
