@@ -10,9 +10,9 @@ library('ggplot2')
 path = 'D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports'
 
 roadnetwork = read.csv(paste(path, '\\Correct_shapefiles_with_note_from_Matt\\roadid_withEF_linklength.csv',sep = ''), sep = ',', header = T)
-aadt = read.csv(paste(path,'\\0-final_aadt_2023.csv', sep = ''), sep = ',', header = T)
-speed1 = read.csv(paste(path,'\\0-avg_speed_negative_2023_ran.csv', sep = ''), sep = ',', header = F)
-speed2 = read.csv(paste(path,'\\0-avg_speed_positive_2023_ran.csv', sep = ''), sep = ',', header = F)
+aadt = read.csv(paste(path,'\\EstimationDataInput\\0-final_aadt_2023.csv', sep = ''), sep = ',', header = T)
+speed1 = read.csv(paste(path,'\\EstimationDataInput\\0-avg_speed_negative_2023_ran.csv', sep = ''), sep = ',', header = F)
+speed2 = read.csv(paste(path,'\\EstimationDataInput\\0-avg_speed_positive_2023_ran.csv', sep = ''), sep = ',', header = F)
 
 speed = rbind(speed1, speed2)
 colnames(speed) = c('linkID','var','speed_kmh')
@@ -20,7 +20,9 @@ colnames(speed) = c('linkID','var','speed_kmh')
 roadnetwork$volume = 0
 roadnetwork$speed_kmh = 0
 
+# get volume and speed for both directions of the road
 for (i in 1:nrow(roadnetwork)) {
+  ## only when both speed and network have the same section, we include the link into the network
   if (length(which(aadt$centreline_id == roadnetwork$geo_id[i])) * 
       length(which(speed$linkID == roadnetwork$geo_id[i])) != 0) {
     roadnetwork$volume[i] = sum(aadt$aadt[which(aadt$centreline_id == roadnetwork$geo_id[i])]) ##aadt for both directions
@@ -28,8 +30,11 @@ for (i in 1:nrow(roadnetwork)) {
   }
 }
 
+## select links with non-empty records for speed and volume
 road_recorded = roadnetwork[which(roadnetwork$volume > 0),]
+# unique road type
 roadtypegis = unique(road_recorded$fcode_desc)
+# rename road type to the recognized one
 road_recorded$roadtype = 0
 for (i in roadtypegis) {
   if (i == "Expressway" | i == 'Expressway Ramp') {
@@ -41,43 +46,67 @@ for (i in roadtypegis) {
 
 }
 
+# convert to mph
 road_recorded$speed_mph = round(road_recorded$speed_kmh/1.6,0)
 
 
-##assign EF values to road record
-road_recorded$ef100 = 0
-road_recorded$ef106 = 0
-road_recorded$ef107 = 0
-road_recorded$ef110 = 0
-road_recorded$ef116 = 0
-road_recorded$ef117 = 0
-
-
-##use pmef_tor
-
+##use pmef_tor_moves
 for (i in 1:nrow(road_recorded)) {
-  road_recorded$ef100[i] = pmef_tor$aggregatedEF[which(pmef_tor$pollutantID == 100 & pmef_tor$linkID == road_recorded$speed_mph[i] & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
-  road_recorded$ef110[i] = pmef_tor$aggregatedEF[which(pmef_tor$pollutantID == 110 & pmef_tor$linkID == road_recorded$speed_mph[i] & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
-  road_recorded$ef106[i] = pmef_tor$aggregatedEF[which(pmef_tor$pollutantID == 106 & pmef_tor$linkID == road_recorded$speed_mph[i] & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
-  road_recorded$ef116[i] = pmef_tor$aggregatedEF[which(pmef_tor$pollutantID == 116 & pmef_tor$linkID == road_recorded$speed_mph[i] & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
-  road_recorded$ef107[i] = pmef_tor$aggregatedEF[which(pmef_tor$pollutantID == 107 & pmef_tor$linkID == road_recorded$speed_mph[i] & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
-  road_recorded$ef117[i] = pmef_tor$aggregatedEF[which(pmef_tor$pollutantID == 117 & pmef_tor$linkID == road_recorded$speed_mph[i] & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$movesef100[i] = pmef_tor_moves$aggregatedEF[which(pmef_tor_moves$pollutantID == 100 & pmef_tor_moves$linkID == road_recorded$speed_mph[i] & pmef_tor_moves$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$movesef110[i] = pmef_tor_moves$aggregatedEF[which(pmef_tor_moves$pollutantID == 110 & pmef_tor_moves$linkID == road_recorded$speed_mph[i] & pmef_tor_moves$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$movesef106[i] = pmef_tor_moves$aggregatedEF[which(pmef_tor_moves$pollutantID == 106 & pmef_tor_moves$linkID == road_recorded$speed_mph[i] & pmef_tor_moves$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$movesef116[i] = pmef_tor_moves$aggregatedEF[which(pmef_tor_moves$pollutantID == 116 & pmef_tor_moves$linkID == road_recorded$speed_mph[i] & pmef_tor_moves$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$movesef107[i] = pmef_tor_moves$aggregatedEF[which(pmef_tor_moves$pollutantID == 107 & pmef_tor_moves$linkID == road_recorded$speed_mph[i] & pmef_tor_moves$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$movesef117[i] = pmef_tor_moves$aggregatedEF[which(pmef_tor_moves$pollutantID == 117 & pmef_tor_moves$linkID == road_recorded$speed_mph[i] & pmef_tor_moves$roadTypeID == road_recorded$roadtype[i])]
 }
+# calculate the total mass of pollutants in grams (initial shape length is in meters and EF in g/mi)
+road_recorded$moves_100 = road_recorded$volume * road_recorded$movesef100 * road_recorded$Shape_Length/1.6/1000
+road_recorded$moves_106 = road_recorded$volume * road_recorded$movesef106 * road_recorded$Shape_Length/1.6/1000
+road_recorded$moves_107 = road_recorded$volume * road_recorded$movesef107 * road_recorded$Shape_Length/1.6/1000
+road_recorded$moves_110 = road_recorded$volume * road_recorded$movesef110 * road_recorded$Shape_Length/1.6/1000
+road_recorded$moves_116 = road_recorded$volume * road_recorded$movesef116 * road_recorded$Shape_Length/1.6/1000
+road_recorded$moves_117 = road_recorded$volume * road_recorded$movesef117 * road_recorded$Shape_Length/1.6/1000
 
-road_recorded$emis100 = road_recorded$volume * road_recorded$ef100 * road_recorded$Shape_Length/1.6
-road_recorded$emis106 = road_recorded$volume * road_recorded$ef106 * road_recorded$Shape_Length/1.6
-road_recorded$emis107 = road_recorded$volume * road_recorded$ef107 * road_recorded$Shape_Length/1.6
-road_recorded$emis110 = road_recorded$volume * road_recorded$ef110 * road_recorded$Shape_Length/1.6
-road_recorded$emis116 = road_recorded$volume * road_recorded$ef116 * road_recorded$Shape_Length/1.6
-road_recorded$emis117 = road_recorded$volume * road_recorded$ef117 * road_recorded$Shape_Length/1.6
+##use pmef_tor_emfac
+# if the EF database is emfac, round to the nearest five
+road_recorded$speed_mph_emfac = round(road_recorded$speed_kmh/1.6/5, 0) * 5
+road_recorded$speed_mph_emfac[which(road_recorded$speed_mph_emfac > 90)] = 90
+for (i in 1:nrow(road_recorded)) {
+  road_recorded$emfacef_100[i] = pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'RUNEX_PM10' & as.numeric(pmef_tor_emfac$linkID) == road_recorded$speed_mph_emfac[i])]# & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$emfacef_110[i] = pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'RUNEX_PM2_5' & as.numeric(pmef_tor_emfac$linkID) == road_recorded$speed_mph_emfac[i])]# & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$emfacef_106[i] = pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'PMBW_PM10' & as.numeric(pmef_tor_emfac$linkID) == road_recorded$speed_mph_emfac[i])]# & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+  road_recorded$emfacef_116[i] = pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'PMBW_PM2_5' & as.numeric(pmef_tor_emfac$linkID) == road_recorded$speed_mph_emfac[i])]# & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+  #road_recorded$ef107[i] = pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'PMTW_PM10' & as.numeric(pmef_tor_emfac$linkID) == road_recorded$speed_mph_emfac[i])]# & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+  #road_recorded$ef117[i] = pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'PMTW_PM2_5' & as.numeric(pmef_tor_emfac$linkID) == road_recorded$speed_mph_emfac[i])]# & pmef_tor$roadTypeID == road_recorded$roadtype[i])]
+}
+# calculate the total mass of pollutants in grams (initial shape length is in meters and EF in g/mi)
+road_recorded$emfac_100 = road_recorded$volume * as.numeric(road_recorded$emfacef_100) * road_recorded$Shape_Length/1.6/1000
+road_recorded$emfac_106 = road_recorded$volume * as.numeric(road_recorded$emfacef_106) * road_recorded$Shape_Length/1.6/1000
+road_recorded$emfac_107 = road_recorded$volume * as.numeric(pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'PMTW_PM10')]) * road_recorded$Shape_Length/1.6/1000
+road_recorded$emfac_110 = road_recorded$volume * as.numeric(road_recorded$emfacef_110) * road_recorded$Shape_Length/1.6/1000
+road_recorded$emfac_116 = road_recorded$volume * as.numeric(road_recorded$emfacef_116) * road_recorded$Shape_Length/1.6/1000
+road_recorded$emfac_117 = road_recorded$volume * as.numeric(pmef_tor_emfac$aggregatedEF[which(pmef_tor_emfac$pollutantID == 'PMTW_PM2_5')]) * road_recorded$Shape_Length/1.6/1000
 
-write.csv(road_recorded, 'D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\roadid_withEF.csv')
+road_recorded_save = cbind(road_recorded$geo_id, 
+                           road_recorded$Shape_Length, road_recorded$speed_kmh, road_recorded$volume, 
+                           road_recorded$moves_100, road_recorded$moves_106, road_recorded$moves_107,
+                           road_recorded$moves_110, road_recorded$moves_116, road_recorded$moves_117,
+                           road_recorded$emfac_100, road_recorded$emfac_106, road_recorded$emfac_107,
+                           road_recorded$emfac_110, road_recorded$emfac_116, road_recorded$emfac_117)
+colnames(road_recorded_save) = c('geo_id', 'length_meter', 'speed_kmh', 'volume',
+                                 'moves100', 'moves106', 'moves107', 'moves110', 'moves116', 'moves117',
+                                 'emfac100', 'emfac106', 'emfac107', 'emfac110', 'emfac116', 'emfac117')
+
+write.csv(road_recorded_save, 'D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\ProcessingOutput\\roadid_withEF_MOVES_EMFAC.csv')
 
 
 ####GIS plot
 library('arcgisbinding')
-
-
+library('here')
+library('leaflet')
+library('leaflet.esri')
+library('raster')
+library('reticulate')
 ###read processed EF file
 #weightedpmef_sheets = excel_sheets('D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\EF_LDV_LDT.xlsx')
 # Initialize a list to store data frames
@@ -99,50 +128,83 @@ library('arcgisbinding')
 
 
 #calculate grid total emissions
-gridemis = read.csv("D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\Correct_shapefiles_with_note_from_Matt\\roadid_clipped_EF.csv",header = T, sep = ',')
+gridemis = read.csv("D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\ProcessingOutput\\Toronto_Grid_Street_Intersect.csv",header = T, sep = ',')
 #correlate this table with road_recorded
-gridemis = data.frame(cbind(gridemis$OBJECTID_12, gridemis$PageName, gridemis$PageNumber, gridemis$geo_id_1,
-                 gridemis$volume, gridemis$speed_mph, gridemis$Shape_Length, gridemis$emis100,
-                 gridemis$emis106, gridemis$emis107, gridemis$emis110, gridemis$emis116, 
-                 gridemis$emis117))
-colnames(gridemis) = c('objectid','pagename','pagenumber','geo_id','volume','speed_mph','length_km',
-                       'emis100','emis106','emis107','emis110','emis116','emis117')
+gridemis = data.frame(cbind(gridemis$OBJECTID_1, gridemis$Toronto_Road_EF_Emission_Gri1_PageName, 
+                            gridemis$Toronto_Road_EF_Emission_Gri1_PageNumber, 
+                            gridemis$geo_id_1, gridemis$volume, gridemis$speed_kmh, gridemis$Shape_Length, 
+                            gridemis$moves100, gridemis$moves106, gridemis$moves107,
+                            gridemis$moves110, gridemis$moves116, gridemis$moves117,
+                            gridemis$emfac100, gridemis$emfac106, gridemis$emfac107,
+                            gridemis$emfac110, gridemis$emfac116, gridemis$emfac117))
+colnames(gridemis) = c('objectid','pagename','pagenumber','geo_id','volume','speed_kmh','length_meter',
+                       'moves100','moves106','moves107','moves110','moves116','moves117',
+                       'emfac100','emfac106','emfac107','emfac110','emfac116','emfac117')
 
 #calculate weighted emissions for each row of gridded links
-gridemis$emis100_c = 0
-gridemis$emis106_c = 0
-gridemis$emis107_c = 0
-gridemis$emis110_c = 0
-gridemis$emis116_c = 0
-gridemis$emis117_c = 0
+gridemis$moves100_c = 0
+gridemis$moves106_c = 0
+gridemis$moves107_c = 0
+gridemis$moves110_c = 0
+gridemis$moves116_c = 0
+gridemis$moves117_c = 0
 
-gridemis$emis100 = as.numeric(gridemis$emis100)
+#calculate weighted emissions for each row of gridded links
+gridemis$emfac100_c = 0
+gridemis$emfac106_c = 0
+gridemis$emfac107_c = 0
+gridemis$emfac110_c = 0
+gridemis$emfac116_c = 0
+gridemis$emfac117_c = 0
+gridemis$volume_c = 0
 
-for (i in 30603:nrow(gridemis)) {
-  gridemis$emis100_c[i] = as.numeric(gridemis$emis100[i]) * as.numeric(gridemis$length_km[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
-  gridemis$emis106_c[i] = as.numeric(gridemis$emis106[i]) * as.numeric(gridemis$length_km[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
-  gridemis$emis107_c[i] = as.numeric(gridemis$emis107[i]) * as.numeric(gridemis$length_km[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
-  gridemis$emis110_c[i] = as.numeric(gridemis$emis110[i]) * as.numeric(gridemis$length_km[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
-  gridemis$emis116_c[i] = as.numeric(gridemis$emis116[i]) * as.numeric(gridemis$length_km[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
-  gridemis$emis117_c[i] = as.numeric(gridemis$emis117[i]) * as.numeric(gridemis$length_km[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+# gridemis$emis100 = as.numeric(gridemis$emis100)
+
+for (i in 1:nrow(gridemis)) {
+  gridemis$volume_c[i] = as.numeric(gridemis$volume[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$moves100_c[i] = as.numeric(gridemis$moves100[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$moves106_c[i] = as.numeric(gridemis$moves106[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$moves107_c[i] = as.numeric(gridemis$moves107[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$moves110_c[i] = as.numeric(gridemis$moves110[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$moves116_c[i] = as.numeric(gridemis$moves116[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$moves117_c[i] = as.numeric(gridemis$moves117[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
   
-  }
-
-pagenum = unique(gridemis$pagenumber)
-gridtotal = data.frame(matrix(0, nrow = length(pagenum), ncol = 7))
-colnames(gridtotal) = c('pagenumber','totalemis100','totalemis106','totalemis107',
-                        'totalemis110','totalemis116','totalemis117')
-gridtotal$pagenumber = pagenum
-for (i in 1:nrow(gridtotal)) {
-  gridtotal$totalemis100[i] = sum(gridemis$emis100_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
-  gridtotal$totalemis106[i] = sum(gridemis$emis106_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
-  gridtotal$totalemis107[i] = sum(gridemis$emis107_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
-  gridtotal$totalemis110[i] = sum(gridemis$emis110_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
-  gridtotal$totalemis116[i] = sum(gridemis$emis116_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
-  gridtotal$totalemis117[i] = sum(gridemis$emis117_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  #gridemis$emfac100_c[i] = as.numeric(gridemis$emfac100[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$emfac106_c[i] = as.numeric(gridemis$emfac106[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$emfac107_c[i] = as.numeric(gridemis$emfac107[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$emfac110_c[i] = as.numeric(gridemis$emfac110[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$emfac116_c[i] = as.numeric(gridemis$emfac116[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  #gridemis$emfac117_c[i] = as.numeric(gridemis$emfac117[i]) * as.numeric(gridemis$length_meter[i])/road_recorded$Shape_Length[which(road_recorded$geo_id == gridemis$geo_id[i])]
+  
 }
 
-write.csv(gridtotal, 'gridtotalemissions.csv',row.names = F)
+pagenum = unique(gridemis$pagenumber)
+gridtotal = data.frame(matrix(0, nrow = length(pagenum), ncol = 14))
+colnames(gridtotal) = c('pagenumber','totalmoves100','totalmoves106','totalmoves107',
+                        'totalmoves110','totalmoves116','totalmoves117',
+                        'totalemfac100','totalemfac106','totalemfac107',
+                        'totalemfac110','totalemfac116','totalemfac117', 'totalvolume')
+gridtotal$pagenumber = pagenum
+for (i in 1:nrow(gridtotal)) {
+  gridtotal$totalmoves100[i] = sum(gridemis$moves100_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalmoves106[i] = sum(gridemis$moves106_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalmoves107[i] = sum(gridemis$moves107_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalmoves110[i] = sum(gridemis$moves110_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalmoves116[i] = sum(gridemis$moves116_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalmoves117[i] = sum(gridemis$moves117_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  
+  gridtotal$totalemfac100[i] = sum(gridemis$emfac100_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalemfac106[i] = sum(gridemis$emfac106_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalemfac107[i] = sum(gridemis$emfac107_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalemfac110[i] = sum(gridemis$emfac110_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalemfac116[i] = sum(gridemis$emfac116_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  gridtotal$totalemfac117[i] = sum(gridemis$emfac117_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  
+  gridtotal$totalvolume[i] = sum(gridemis$volume_c[which(gridemis$pagenumber == gridtotal$pagenumber[i])])
+  
+}
+
+write.csv(gridtotal, 'Toronto_Gridtotalemissions_MOVES_EMFAC.csv',row.names = F)
 
 
 ###planning boundaries

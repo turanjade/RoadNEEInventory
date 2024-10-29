@@ -48,17 +48,17 @@ veh_fuel_age_weighted_ef <- function(road = NULL, link, pollutant, vehageshare, 
   source <- unique(efdb$sourceTypeID)
   
   if (emfac == 1) {
-    road <- 5
-    vehageshare$percentage[which(vehageshare$vehType == "Light trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/length(which(vehlookup$vehLocal == "Light trucks")) # nolint
-    vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")]/length(which(vehlookup$vehLocal == "Heavy trucks")) #nolint
-    vehageshare$percentage[which(vehageshare$vehType == "Buses")] <- vehageshare$percentage[which(vehageshare$vehType == "Buses")]/length(which(vehlookup$vehLocal == "Buses")) #nolint
+   road <- 5
+#    vehageshare$percentage[which(vehageshare$vehType == "Light trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/length(which(vehlookup$vehLocal == "Light trucks")) # nolint
+#    vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")]/length(which(vehlookup$vehLocal == "Heavy trucks")) #nolint
+#    vehageshare$percentage[which(vehageshare$vehType == "Buses")] <- vehageshare$percentage[which(vehageshare$vehType == "Buses")]/length(which(vehlookup$vehLocal == "Buses")) #nolint
   }
-  
-  if (moves == 1) {
-    vehageshare$percentage[which(vehageshare$vehType == "Light trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/2 # nolint
-    vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/5 #nolint
-    vehageshare$percentage[which(vehageshare$vehType == "Buses")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/3 #nolint
-  }
+#  
+#  if (moves == 1) {
+#    vehageshare$percentage[which(vehageshare$vehType == "Light trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/2 # nolint
+#    vehageshare$percentage[which(vehageshare$vehType == "Heavy trucks")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/5 #nolint
+#    vehageshare$percentage[which(vehageshare$vehType == "Buses")] <- vehageshare$percentage[which(vehageshare$vehType == "Light trucks")]/3 #nolint
+#  }
   
   row <- 0 #redirect to the specific row to fill in the pmef
   for (p in pollutant) { # nolint
@@ -66,27 +66,23 @@ veh_fuel_age_weighted_ef <- function(road = NULL, link, pollutant, vehageshare, 
       for (l in link) {
         weightef <- 0
         row <- row + 1
-        for (s in source) {
+        for (s in veh) {
           #lookup the local vehicle category
-          v <- unique(vehlookup$vehLocal[which(as.character(vehlookup$vehDB) == s)])
+          # v <- unique(vehlookup$vehLocal[which(vehlookup$vehDB == s)])
           for (f in fuel) {
             for (a in age) {
               findrow <- which(efdb$linkID == l &
                                  efdb$pollutantID == p &
-                                 efdb$sourceTypeID == s &
+                                 efdb$vehtype == s &
                                  efdb$fuelTypeID == f &
                                  efdb$roadTypeID == r &
                                  efdb$modelYearID == a)
               if (length(findrow) == 0) {
                 weightef <- weightef
               } else {
-                weightef <- weightef +  vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == v)]* # nolint # age ratio
+                weightef <- weightef +  vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == s)]* # nolint # age ratio
                   fuelshare$fuelshare[which(fuelshare$fueltype == f)] *  # nolint # fuel ratio
-                  vehtypeshare$percentage[which(vehtypeshare$vehType == v)] * efdb$emissionQuant[findrow] # nolint # type ratio
-                #print(paste("age share", vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == v)],
-                #      "fuelshare", fuelshare$fuelshare[which(fuelshare$fueltype == f)],
-                #      "typeshare", vehtypeshare$percentage[which(vehtypeshare$vehtype == v)],
-                #      "ef", efdb$emissionQuant[findrow], sep = ","))
+                  vehtypeshare$percentage[which(vehtypeshare$vehType == s)] * mean(efdb$emissionQuant[findrow]) # nolint # type ratio
               }
             }
           }
@@ -96,6 +92,37 @@ veh_fuel_age_weighted_ef <- function(road = NULL, link, pollutant, vehageshare, 
       }
     }
   }
+  
+  ### calculate PMTW specifically
+  if (emfac == 1) {
+    # v <- unique(vehlookup$vehLocal[which(vehlookup$vehDB == s)])
+    for (p in pollutant) {
+      weightef <- 0
+      row <- row + 1
+      for (s in veh) {
+        for (a in age) {
+          for (f in fuel) {
+            findrow <- which(efdb$process == 'PMTW' &
+                               efdb$pollutantID == p &
+                               efdb$vehtype == s &
+                               efdb$fuelTypeID == f &
+                               efdb$roadTypeID == r &
+                               efdb$modelYearID == a)
+            if (length(findrow) == 0) {
+              weightef <- weightef
+            } else {
+              weightef <- weightef +  vehageshare$percentage[which(vehageshare$yearID == a & vehageshare$vehType == s)]* # nolint # age ratio
+                fuelshare$fuelshare[which(fuelshare$fueltype == f)] *  # nolint # fuel ratio
+                vehtypeshare$percentage[which(vehtypeshare$vehType == s)] * mean(efdb$emissionQuant[findrow]) # nolint # type ratio
+            }
+          }
+        }
+      }
+      pmef_local[row, ] <- cbind(l, p, r, weightef)
+      print(paste("This is row:", row, "speed, pollutant, road, ef are:", l, p, r, weightef)) # nolint
+    }
+  }
+  pmef_local = pmef_local[which(pmef_local$aggregatedEF > 0),]
   return(pmef_local)
 }
 
@@ -296,6 +323,7 @@ pmef_emfac <- pmef_emfac[which(pmef_emfac$process == "RUNEX" | pmef_emfac$proces
 age <- unique(pmef_emfac$model_year)
 fuel <- unique(pmef_emfac$fuel)
 speed <- unique(pmef_emfac$speed_time)
+speed = speed[!is.na(speed)]
 # pmef_emfac_avg <- data.frame(matrix(0, nrow, ncol = 7)) # nolint
 pmef_emfac$process_pollutant <- paste(pmef_emfac$process, pmef_emfac$pollutant, sep = "_") # nolint
 pollutant <- unique(pmef_emfac$process_pollutant)
@@ -308,7 +336,7 @@ colnames(pmef_emfac) <- c("calendar_year",	"season_month",	"sub_area",
                        "sourceTypeID",	"fuelTypeID",	"modelYearID",
                        "temperature",	"relative_humidity",
                        "process",	"linkID",	"pollutant",	"emissionQuant",
-                       "veh", "pollutantID", "roadTypeID")
+                       "vehtype", "pollutantID", "roadTypeID")
 
 ## Apply the function
 pmef_tor_emfac <- veh_fuel_age_weighted_ef(5, speed, pollutant, vehageshare, vehtypeshare, fuelshare, pmef_emfac, 0, 1) #nolint
