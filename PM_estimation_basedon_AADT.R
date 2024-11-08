@@ -261,4 +261,5 @@ for (i in 1:nrow(boundarytotal)) {
 
 write.csv(boundarytotal, 'boundarytotalemissions.csv',row.names = F)
 
-
+### get all the roads on highway 401, and plot the speed distribution to show the irrational speed profile
+road_hwy = roadnetwork[which(roadnetwork$fcode_desc == 'Expressway'),]

@@ -9,6 +9,9 @@ emissionratepath = 'D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\
 er_opmode = read.xlsx(paste(emissionratepath, '\\MOVES4_output\\toronto_opmode_pc_CO2NOxPM\\',
                             'opmode_nov_95_pc_crosschecked.xlsx', sep=''), sheet = 'added_opmode')
 
+# emission factor is a separate value of each year model (31 year models)
+er_opmode$emissionQuant = er_opmode$emissionQuant * 31
+
 # emission rate table should be: different model year, 23 operating mode, CO2 (90-5-6), NOx (3), PM2.5 (112+118+115+118)
 # delete link 208 which corresponds to nonroad
 er_opmode = er_opmode[which(er_opmode$linkID < 208),]
@@ -16,6 +19,7 @@ year = unique(er_opmode$modelYearID)
 opmode = unique(er_opmode$OpMode)
 er_aggregate = data.frame(matrix(0, nrow = length(year)*length(opmode), ncol = 5))
 colnames(er_aggregate) = c('VehYear', 'OpMode', 'CO2eq', 'NOx', 'PM2_5')
+
 
 row = 0
 for (i in 1:length(year)) {

@@ -18,15 +18,15 @@
 #[21] "sectorID"           "hpID"               "emissionQuant"      "emissionQuantMean"  # nolint
 #[25] "emissionQuantSigma"
 
-library("openxlsx") # nolint
+library("openxlsx") #  
 
 rootpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程"
-movesefpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\MOVES4_output\\toronto_avgspeeed_pc_allPM" # nolint
+movesefpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\MOVES4_output\\toronto_avgspeeed_pc_allPM" #  
 
-inputpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\EstimationDataInput" # nolint
-outputpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\ProcessingOutput" # nolint
+inputpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\EstimationDataInput" #  
+outputpath <- "D:\\微云同步助手\\332667113\\2025-省基金申请-NEE\\0-研究进程\\2024-UofT_NEE reports\\ProcessingOutput" #  
 
-setwd(outputpath) # nolint
+setwd(outputpath) #  
 
 ############################################################################
 ############################################################################
@@ -210,7 +210,8 @@ for (i in 1:length(filelist)) { # nolint
     vehage <- unique(pmef_i$modelYearID)
     for (j in 1:length(vehage)) { # nolint
       pmef_i$emissionQuant[which(pmef_i$modelYearID == vehage[j])] <-
-        pmef_i$emissionQuant[which(pmef_i$modelYearID == vehage[j])]/10/agedist$ageFraction[which(agedist$age == vehage[j])] # nolint #adjust emissions based on vehicle age proportion and link length (10 miles)
+        pmef_i$emissionQuant[which(pmef_i$modelYearID == vehage[j])]*31/10/ # original emissionQuant is an average of 31 year models of vehicles; 10 is the link length (miles)
+        agedist$ageFraction[which(agedist$age == vehage[j])] # nolint #adjust emissions based on vehicle age proportion and link length (10 miles)
     }
     pmef_i <- pmef_i[, c(10, 11, 13, 15, 17, 18, 23)]
     pmef_i$sourceTypeID <- strsplit(filelist[i], "_")[[1]][2]
