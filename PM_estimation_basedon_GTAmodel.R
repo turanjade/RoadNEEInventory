@@ -165,7 +165,7 @@ gtamodel_evlink$bwp10_emfac = gtamodel_evlink$bwp10ef_emfac / 1.6 * # g/mile con
 gtamodel_evlink$bwp25_emfac = gtamodel_evlink$bwp25ef_emfac / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_evlink$length_km) * as.numeric(gtamodel_evlink$volume_original)/0.2
 
-# MOVES speed bin split per 1 mph
+################### MOVES speed bin split per 1 mph
 # assign EF
 ## for AM link
 for (i in 1:nrow(gtamodel_amlink)) {
@@ -254,6 +254,10 @@ gtamodel_mdlink$bwp10_moves = gtamodel_mdlink$bwp10ef_moves / 1.6 * # g/mile con
   as.numeric(gtamodel_mdlink$length_km) * as.numeric(gtamodel_mdlink$volume_original)/0.1666667
 gtamodel_mdlink$bwp25_moves = gtamodel_mdlink$bwp25ef_moves / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_mdlink$length_km) * as.numeric(gtamodel_mdlink$volume_original)/0.1666667
+gtamodel_mdlink$twp10_moves = gtamodel_mdlink$twp10ef_moves / 1.6 * # g/mile convert to g/km
+  as.numeric(gtamodel_mdlink$length_km) * as.numeric(gtamodel_mdlink$volume_original)/0.1666667
+gtamodel_mdlink$twp25_moves = gtamodel_mdlink$twp25ef_moves / 1.6 * # g/mile convert to g/km
+  as.numeric(gtamodel_mdlink$length_km) * as.numeric(gtamodel_mdlink$volume_original)/0.1666667
 #pm
 gtamodel_pmlink$tp10_moves = gtamodel_pmlink$tp10ef_moves / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_pmlink$length_km) * as.numeric(gtamodel_pmlink$volume_original)/0.307
@@ -263,6 +267,10 @@ gtamodel_pmlink$bwp10_moves = gtamodel_pmlink$bwp10ef_moves / 1.6 * # g/mile con
   as.numeric(gtamodel_pmlink$length_km) * as.numeric(gtamodel_pmlink$volume_original)/0.307
 gtamodel_pmlink$bwp25_moves = gtamodel_pmlink$bwp25ef_moves / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_pmlink$length_km) * as.numeric(gtamodel_pmlink$volume_original)/0.307
+gtamodel_pmlink$twp10_moves = gtamodel_pmlink$twp10ef_moves / 1.6 * # g/mile convert to g/km
+  as.numeric(gtamodel_pmlink$length_km) * as.numeric(gtamodel_pmlink$volume_original)/0.307
+gtamodel_pmlink$twp25_moves = gtamodel_pmlink$twp25ef_moves / 1.6 * # g/mile convert to g/km
+  as.numeric(gtamodel_pmlink$length_km) * as.numeric(gtamodel_pmlink$volume_original)/0.307
 #ev
 gtamodel_evlink$tp10_moves = gtamodel_evlink$tp10ef_moves / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_evlink$length_km) * as.numeric(gtamodel_evlink$volume_original)/0.2
@@ -271,6 +279,10 @@ gtamodel_evlink$tp25_moves = gtamodel_evlink$tp25ef_moves / 1.6 * # g/mile conve
 gtamodel_evlink$bwp10_moves = gtamodel_evlink$bwp10ef_moves / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_evlink$length_km) * as.numeric(gtamodel_evlink$volume_original)/0.2
 gtamodel_evlink$bwp25_moves = gtamodel_evlink$bwp25ef_moves / 1.6 * # g/mile convert to g/km
+  as.numeric(gtamodel_evlink$length_km) * as.numeric(gtamodel_evlink$volume_original)/0.2
+gtamodel_evlink$twp10_moves = gtamodel_evlink$twp10ef_moves / 1.6 * # g/mile convert to g/km
+  as.numeric(gtamodel_evlink$length_km) * as.numeric(gtamodel_evlink$volume_original)/0.2
+gtamodel_evlink$twp25_moves = gtamodel_evlink$twp25ef_moves / 1.6 * # g/mile convert to g/km
   as.numeric(gtamodel_evlink$length_km) * as.numeric(gtamodel_evlink$volume_original)/0.2
 
 
